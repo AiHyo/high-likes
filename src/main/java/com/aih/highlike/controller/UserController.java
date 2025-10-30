@@ -6,6 +6,7 @@ import com.aih.highlike.constant.UserConstant;
 import com.aih.highlike.exception.BusinessException;
 import com.aih.highlike.exception.ErrorCode;
 import com.aih.highlike.model.entity.User;
+import com.aih.highlike.service.ThumbService;
 import com.aih.highlike.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +28,9 @@ public class UserController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private ThumbService thumbService;
+
     /**
      * 用户登录（简化版，仅用于测试）
      */
@@ -42,7 +46,12 @@ public class UserController {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
         }
 
+        // 设置登录态
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
+
+        // 同步用户点赞记录到 Redis
+        thumbService.syncUserThumbsToRedis(userId);
+
         return ResultUtils.success(user);
     }
 
@@ -65,6 +74,11 @@ public class UserController {
     @GetMapping("/logout")
     @Operation(summary = "用户登出")
     public BaseResponse<Boolean> logout(HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        if (loginUser != null) {
+            // 清除用户点赞缓存
+            thumbService.clearUserThumbCache(loginUser.getId());
+        }
         request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
         return ResultUtils.success(true);
     }

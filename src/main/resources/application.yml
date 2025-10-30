@@ -10,6 +10,14 @@ spring:
     url: jdbc:mysql://localhost:3306/high_like?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=UTC
     username: root
     password: 123456
+  data:
+    # Redis 配置
+    redis:
+      database: 0
+      host: localhost
+      timeout: 5000
+      port: 6379
+
 # mybatis-plus
 mybatis-plus:
   configuration:
