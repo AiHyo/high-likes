@@ -18,13 +18,15 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * 点赞服务实现
+ * 点赞服务实现（同步版本）
  */
 @Slf4j
-@Service
+@Service("thumbServiceSync")
 public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements ThumbService {
 
     @Resource
@@ -247,7 +249,6 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
         // 返回的列表与 blogIdList 顺序一一对应
         return redisTemplate.opsForHash().multiGet(userThumbKey, blogIdList);
     }
-}
 
     /**
      * 将用户的点赞记录从数据库同步到 Redis
@@ -329,3 +330,4 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
         redisTemplate.delete(userThumbKey);
         log.info("用户 {} 的点赞缓存已清除", userId);
     }
+}

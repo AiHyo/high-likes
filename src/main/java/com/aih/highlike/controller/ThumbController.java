@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "点赞接口")
 public class ThumbController {
 
-    @Resource
+    @Resource(name = "thumbServiceAsync")
     private ThumbService thumbService;
 
     /**
