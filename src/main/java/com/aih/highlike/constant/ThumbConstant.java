@@ -25,4 +25,12 @@ public interface ThumbConstant {
      * - operationType: 1=点赞，-1=取消点赞，0=无变化
      */
     String TEMP_THUMB_KEY_PREFIX = "thumb:temp:%s";
+
+    /**
+     * 未点赞标识
+     * <p>
+     * 用于本地缓存中标识用户未点赞状态
+     * 当值为 0 时表示用户已取消点赞，避免频繁查询 Redis
+     */
+    Long UN_THUMB_CONSTANT = 0L;
 }

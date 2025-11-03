@@ -30,7 +30,7 @@ public interface ThumbService extends IService<Thumb> {
     boolean cancelThumb(Long blogId, HttpServletRequest request);
 
     /**
-     * 判断用户是否已点赞（从 Redis 查询）
+     * 判断用户是否已点赞
      *
      * @param blogId 博客ID
      * @param userId 用户ID
@@ -39,7 +39,7 @@ public interface ThumbService extends IService<Thumb> {
     Boolean hasThumb(Long blogId, Long userId);
 
     /**
-     * 批量获取用户的点赞记录（从 Redis 查询）
+     * 批量获取用户的点赞记录
      *
      * @param userId     用户ID
      * @param blogIdList 博客ID列表

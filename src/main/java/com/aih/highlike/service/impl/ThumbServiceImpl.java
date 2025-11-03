@@ -41,6 +41,9 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Resource
+    private com.aih.highlike.manager.cache.CacheManager cacheManager;
+
     /**
      * 点赞
      * <p>
@@ -81,7 +84,6 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
             // 使用编程式事务，确保事务在锁内完整执行
             return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
                 // 从 Redis 检查是否已点赞
-                // 使用 Redis 而非 MySQL，提升查询性能
                 Boolean exists = hasThumb(blogId, userId);
                 if (Boolean.TRUE.equals(exists)) {
                     throw new BusinessException(ErrorCode.OPERATION_ERROR, "已点赞，请勿重复操作");
@@ -107,6 +109,9 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
                 // Redis Hash 操作：HSET thumb:user:{userId} {blogId} {thumbId}
                 // 存储格式：Hash 的 field 是 blogId，value 是点赞记录ID
                 redisTemplate.opsForHash().put(userThumbKey, blogId.toString(), thumb.getId());
+
+                // 如果本地缓存存在该 Key，则更新
+                cacheManager.putIfPresent(userThumbKey, blogId.toString(), thumb.getId());
 
                 return true;
             }));
@@ -153,29 +158,31 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
                 // 从 Redis 获取点赞记录ID
                 // Redis Hash 操作：HGET thumb:user:{userId} {blogId}
                 // 获取该用户对该博客的点赞记录ID
-                Object thumbIdObj = redisTemplate.opsForHash().get(userThumbKey, blogId.toString());
-                if (thumbIdObj == null) {
+//                Object thumbIdObj = redisTemplate.opsForHash().get(userThumbKey, blogId.toString());
+                Object thumbIdObj = cacheManager.get(userThumbKey, blogId.toString());
+                if (thumbIdObj == null || thumbIdObj.equals(ThumbConstant.UN_THUMB_CONSTANT)) {
                     throw new BusinessException(ErrorCode.OPERATION_ERROR, "未点赞，无法取消");
                 }
 
-                Long thumbId = Long.valueOf(thumbIdObj.toString());
-
-                // 减少博客点赞数（MySQL）
+                // 更新数据库
+                Long thumbId = (Long) thumbIdObj;
+                // 减少博客的点赞数
                 boolean updateSuccess = blogService.decrementThumbCount(blogId);
                 if (!updateSuccess) {
                     throw new BusinessException(ErrorCode.OPERATION_ERROR, "取消点赞失败");
                 }
-
                 // 删除数据库中的点赞记录
                 boolean removeSuccess = this.removeById(thumbId);
                 if (!removeSuccess) {
                     throw new BusinessException(ErrorCode.OPERATION_ERROR, "取消点赞失败");
                 }
 
-                // 从 Redis 删除点赞记录
-                // Redis Hash 操作：HDEL thumb:user:{userId} {blogId}
+                // 更新 Redis
                 // 删除该用户对该博客的点赞记录
+                // Redis Hash 操作：HDEL thumb:user:{userId} {blogId}
                 redisTemplate.opsForHash().delete(userThumbKey, blogId.toString());
+                // 如果本地缓存存在该 Key，更新为未点赞标识
+                cacheManager.putIfPresent(userThumbKey, blogId.toString(), ThumbConstant.UN_THUMB_CONSTANT);
 
                 return true;
             }));
@@ -184,16 +191,7 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
 
 
     /**
-     * 判断用户是否已点赞（从 Redis 查询）
-     * <p>
-     * Redis 操作说明：
-     * - 使用 HEXISTS 命令检查 Hash 中是否存在指定字段
-     * - 命令格式：HEXISTS thumb:user:{userId} {blogId}
-     * - 返回 1 表示存在（已点赞），0 表示不存在（未点赞）
-     * <p>
-     * 性能优势：
-     * - Redis 内存查询，响应时间 < 1ms
-     * - 相比 MySQL 查询，性能提升 10-100 倍
+     * 判断用户是否已点赞
      *
      * @param blogId 博客ID
      * @param userId 用户ID
@@ -204,11 +202,15 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
         if (blogId == null || userId == null) {
             return false;
         }
-        // 构建 Redis Key: thumb:user:{userId}
-        String userThumbKey = ThumbConstant.USER_THUMB_KEY_PREFIX + userId;
-        // Redis Hash 操作：HEXISTS thumb:user:{userId} {blogId}
-        // 检查该用户是否对该博客点过赞
-        return redisTemplate.opsForHash().hasKey(userThumbKey, blogId.toString());
+        // 获取缓存中的点赞信息
+        String hashKey = ThumbConstant.USER_THUMB_KEY_PREFIX + userId;
+        Object thumbIdObj = cacheManager.get(hashKey, blogId.toString());
+        if (thumbIdObj == null) {
+            return false;
+        }
+        // 判断是否已点赞
+        Long thumbId = (Long) thumbIdObj;
+        return !thumbId.equals(ThumbConstant.UN_THUMB_CONSTANT);
     }
 
     /**
