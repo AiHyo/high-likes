@@ -28,7 +28,7 @@ public class UserController {
     @Resource
     private UserService userService;
 
-    @Resource(name = "thumbServiceAsync")
+    @Resource(name = "thumbServiceLocalCache")
     private ThumbService thumbService;
 
     /**

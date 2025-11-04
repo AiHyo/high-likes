@@ -31,7 +31,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements Bl
     @Resource
     private UserService userService;
 
-    @Resource(name = "thumbServiceAsync")
+    @Resource(name = "thumbServiceRedis")
     @Lazy
     private ThumbService thumbService;
 

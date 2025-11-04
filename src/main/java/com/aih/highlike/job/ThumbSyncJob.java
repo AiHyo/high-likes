@@ -29,7 +29,7 @@ import java.util.*;
 @Component
 public class ThumbSyncJob {
 
-    @Resource(name = "thumbServiceAsync")
+    @Resource(name = "thumbServiceRedis")
     private ThumbService thumbService;
 
     @Resource

@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.aih.highlike.constant.ThumbConstant;
 import com.aih.highlike.exception.BusinessException;
 import com.aih.highlike.exception.ErrorCode;
+import com.aih.highlike.manager.cache.CacheManager;
 import com.aih.highlike.mapper.ThumbMapper;
 import com.aih.highlike.model.entity.Thumb;
 import com.aih.highlike.model.entity.User;
@@ -18,15 +19,14 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 点赞服务实现（同步版本）
  */
 @Slf4j
-@Service("thumbServiceSync")
+//@Service("thumbServiceSync")
+@Service("thumbServiceLocalCache")
 public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements ThumbService {
 
     @Resource
@@ -42,7 +42,7 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
     private RedisTemplate<String, Object> redisTemplate;
 
     @Resource
-    private com.aih.highlike.manager.cache.CacheManager cacheManager;
+    private CacheManager cacheManager;
 
     /**
      * 点赞

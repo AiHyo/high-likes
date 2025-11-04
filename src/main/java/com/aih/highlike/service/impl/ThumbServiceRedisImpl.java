@@ -1,7 +1,6 @@
 package com.aih.highlike.service.impl;
 
 import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.util.StrUtil;
 import com.aih.highlike.constant.RedisLuaScript;
 import com.aih.highlike.exception.BusinessException;
 import com.aih.highlike.exception.ErrorCode;
@@ -21,7 +20,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 点赞服务异步实现
@@ -32,8 +33,8 @@ import java.util.List;
  * 3. 使用时间分片策略，便于批量处理
  */
 @Slf4j
-@Service("thumbServiceAsync")
-public class ThumbServiceAsyncImpl extends ServiceImpl<ThumbMapper, Thumb> implements ThumbService {
+@Service("thumbServiceRedis")
+public class ThumbServiceRedisImpl extends ServiceImpl<ThumbMapper, Thumb> implements ThumbService {
 
     @Resource
     private UserService userService;
@@ -172,7 +173,7 @@ public class ThumbServiceAsyncImpl extends ServiceImpl<ThumbMapper, Thumb> imple
             return;
         }
 
-        java.util.Map<String, Object> thumbMap = new java.util.HashMap<>();
+        Map<String, Object> thumbMap = new HashMap<>();
         for (Thumb thumb : thumbList) {
             thumbMap.put(thumb.getBlogId().toString(), thumb.getId());
         }
@@ -186,10 +187,8 @@ public class ThumbServiceAsyncImpl extends ServiceImpl<ThumbMapper, Thumb> imple
         if (userId == null) {
             return;
         }
-
         String userThumbKey = RedisKeyUtil.getUserThumbKey(userId);
         redisTemplate.delete(userThumbKey);
-        log.info("用户 {} 的点赞缓存已清除", userId);
     }
 
     /**
