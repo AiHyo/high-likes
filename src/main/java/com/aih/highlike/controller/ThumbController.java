@@ -6,6 +6,8 @@ import com.aih.highlike.exception.BusinessException;
 import com.aih.highlike.exception.ErrorCode;
 import com.aih.highlike.model.dto.thumb.ThumbRequest;
 import com.aih.highlike.service.ThumbService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Counter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 点赞控制器
+ * @author zengliqiang
  */
 @RestController
 @RequestMapping("/thumb")
@@ -25,6 +28,20 @@ public class ThumbController {
 
     @Resource(name = "thumbServiceLocalCache")
     private ThumbService thumbService;
+
+    @Resource
+    private Counter successCounter;
+    @Resource
+    private Counter failureCounter;
+
+    public ThumbController(MeterRegistry registry) {
+        this.successCounter = Counter.builder("thumb.success.count")
+                .description("点赞成功次数")
+                .register(registry);
+        this.failureCounter = Counter.builder("thumb.failure.count")
+                .description("点赞失败次数")
+                .register(registry);
+    }
 
     /**
      * 点赞
@@ -35,8 +52,19 @@ public class ThumbController {
         if (thumbRequest == null || thumbRequest.getBlogId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean result = thumbService.doThumb(thumbRequest.getBlogId(), request);
-        return ResultUtils.success(result);
+        try {
+            boolean result = thumbService.doThumb(thumbRequest.getBlogId(), request);
+            if (result) {
+                successCounter.increment();
+                return ResultUtils.success(true);
+            } else {
+                failureCounter.increment();
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+            }
+        } catch (Exception e){
+            failureCounter.increment();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
     }
 
     /**

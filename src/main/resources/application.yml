@@ -18,6 +18,19 @@ spring:
       timeout: 5000
       port: 6379
 
+# 整合 Prometheus + Grafana
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus # 开启 prometheus 指标
+  metrics:
+    distribution:
+      percentiles:
+        http:
+          server:
+            requests: 0.5, 0.75, 0.9, 0.95, 0.99
+
 # mybatis-plus
 mybatis-plus:
   configuration:
